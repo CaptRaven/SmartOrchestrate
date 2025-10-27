@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+#watson-chat-root {
+  min-height: 600px;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.wxo-webchat-container {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.container {
+  height: 100%;
+  width: 100%;
+}
+
+.chatRoot {
+  width: 100%;
+  height: calc(100vh - 56px);
+  max-width: 80rem;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  position: relative;
+  overflow: hidden;
+}
