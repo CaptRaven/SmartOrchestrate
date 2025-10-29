@@ -1,129 +1,77 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-// Type declarations for Watson Orchestrate
 declare global {
   interface Window {
-    wxOConfiguration: {
-      orchestrationID: string;
-      hostURL: string;
-      rootElementID: string;
-      showLauncher: boolean;
-      chatOptions: {
-        agentId: string;
-        agentEnvironmentId: string;
-      };
-      layout: {
-        form: 'fullscreen-overlay' | 'float' | 'custom';
-        width: string;
-        height: string;
-        showOrchestrateHeader: boolean;
-        customElement?: HTMLElement;
-      };
-    };
-    wxoLoader: {
-      init: () => void;
-    };
+    wxOConfiguration?: any;
+    wxoLoader?: any;
   }
 }
 
 export default function AIAssistant() {
+  const [status, setStatus] = useState("Loading Orchestrate Assistant…");
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
+    // Create a separate container for the chat UI
+    const container = document.createElement("div");
+    container.id = "orchestrate-chat-root";
+    document.body.appendChild(container);
 
-    const initializeChat = () => {
+    // Define configuration (your provided embed code)
+    window.wxOConfiguration = {
+      orchestrationID:
+        "ab446fdeebdd469cb1f8eb4b0ee169c8_afac4274-ed4f-4982-9175-d4a2f67c4307",
+      hostURL: "https://jp-tok.watson-orchestrate.cloud.ibm.com",
+      rootElementID: "orchestrate-chat-root", // 🔹 not "root"
+      showLauncher: true,
+      crn: "crn:v1:bluemix:public:watsonx-orchestrate:jp-tok:a/ab446fdeebdd469cb1f8eb4b0ee169c8:afac4274-ed4f-4982-9175-d4a2f67c4307::",
+      deploymentPlatform: "ibmcloud",
+      chatOptions: {
+        agentId: "d0e16d5c-30e8-4cc4-be77-9e682ecc4dee",
+        agentEnvironmentId: "d9bd76f2-f547-4801-9ce1-ec38e8401981",
+      },
+    };
+
+    // Inject Orchestrate chat script
+    const script = document.createElement("script");
+    script.src = `${window.wxOConfiguration.hostURL}/wxochat/wxoLoader.js?embed=true`;
+    script.async = true;
+
+    script.onload = () => {
       try {
-        // Configure Watson Orchestrate with float layout
-        window.wxOConfiguration = {
-          orchestrationID: "20251024-1027-2250-70d4-4169d715f5e1_20251024-1027-5237-4093-b4428b129b9c",
-          hostURL: "https://dl.watson-orchestrate.ibm.com",
-          rootElementID: "watson-chat-container",
-          showLauncher: false,
-          chatOptions: {
-            agentId: "4bf799df-3f89-4844-87bc-727c7389dbae",
-            agentEnvironmentId: "b7105b43-f883-4349-9d0a-1579814f5385",
-          },
-          layout: {
-            form: 'float',
-            width: '100%',
-            height: '600px',
-            showOrchestrateHeader: true
-          }
-        };
-
-        setTimeout(() => {
-          const script = document.createElement('script');
-          script.src = `${window.wxOConfiguration.hostURL}/wxochat/wxoLoader.js?embed=true`;
-          
-          script.addEventListener('load', () => {
-            if (mounted && window.wxoLoader) {
-              window.wxoLoader.init();
-              setIsLoading(false);
-            }
-          });
-
-          script.addEventListener('error', (e) => {
-            console.error('Script loading error:', e);
-            if (mounted) {
-              setError('Failed to load chat service');
-              setIsLoading(false);
-            }
-          });
-
-          document.head.appendChild(script);
-        }, 0);
-
-        return () => {
-          const script = document.querySelector(`script[src*="wxoLoader.js"]`);
-          if (script && script.parentNode) {
-            script.parentNode.removeChild(script);
-          }
-        };
+        window.wxoLoader.init();
+        setStatus("✅ SmartOrchestrate chat initialized");
       } catch (err) {
-        console.error('Initialization error:', err);
-        if (mounted) {
-          setError(`Failed to initialize chat: ${err instanceof Error ? err.message : 'Unknown error'}`);
-          setIsLoading(false);
-        }
+        console.error("Initialization error:", err);
+        setError("Failed to initialize Watsonx Orchestrate");
       }
     };
 
-    const cleanup = initializeChat();
+    script.onerror = () => {
+      setError("Failed to load Orchestrate script");
+    };
 
+    document.head.appendChild(script);
+
+    // Cleanup when component unmounts
     return () => {
-      mounted = false;
-      if (cleanup) cleanup();
+      script.remove();
+      container.remove();
+      delete window.wxOConfiguration;
     };
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="flex-1 p-4">
-        {isLoading && (
-          <div className="flex justify-center items-center h-32">
-            <p className="text-gray-600">Loading chat service...</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="p-4 mb-4 bg-red-50 text-red-700 rounded-md">
-            <p className="font-medium">Error</p>
-            <p>{error}</p>
-          </div>
-        )}
-
-        <div
-          id="watson-chat-container"
-          className="w-full max-w-5xl mx-auto bg-white rounded-lg shadow-lg"
-          style={{
-            position: 'relative',
-            minHeight: '600px',
-            display: isLoading ? 'none' : 'block'
-          }}
-        />
-      </div>
+    <div className="flex flex-col items-center justify-center h-[80vh] text-gray-800">
+      <h2 className="text-2xl font-bold mb-2">💬 SmartOrchestrate Assistant</h2>
+      {error ? (
+        <p className="text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+          {error}
+        </p>
+      ) : (
+        <p>{status}</p>
+      )}
+      {/* The chat launcher renders itself (floating widget) */}
     </div>
   );
 }
