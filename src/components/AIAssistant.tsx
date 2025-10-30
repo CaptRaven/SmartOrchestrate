@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 declare global {
   interface Window {
@@ -8,13 +8,16 @@ declare global {
 }
 
 export default function AIAssistant() {
+  const [status, setStatus] = useState("Loading Orchestrate Assistant…");
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Inject IBM Orchestrate chat
+    // ✅ Define configuration (your live embed code)
     window.wxOConfiguration = {
       orchestrationID:
         "ab446fdeebdd469cb1f8eb4b0ee169c8_afac4274-ed4f-4982-9175-d4a2f67c4307",
       hostURL: "https://jp-tok.watson-orchestrate.cloud.ibm.com",
-      rootElementID: "root",
+      rootElementID: "ibm-orchestrate-chat", // Local placeholder container
       showLauncher: true,
       deploymentPlatform: "ibmcloud",
       crn: "crn:v1:bluemix:public:watsonx-orchestrate:jp-tok:a/ab446fdeebdd469cb1f8eb4b0ee169c8:afac4274-ed4f-4982-9175-d4a2f67c4307::",
@@ -24,58 +27,52 @@ export default function AIAssistant() {
       },
     };
 
+    // ✅ Inject the Orchestrate chat script
     const script = document.createElement("script");
     script.src = `${window.wxOConfiguration.hostURL}/wxochat/wxoLoader.js?embed=true`;
-    script.addEventListener("load", function () {
-      console.log("✅ IBM Orchestrate chat script loaded successfully");
-      if (window.wxoLoader && typeof window.wxoLoader.init === "function") {
-        window.wxoLoader.init();
-        console.log("💬 IBM Orchestrate chat initialized");
-      } else {
-        console.error("❌ wxoLoader not found after script load");
-      }
-    });
-    script.addEventListener("error", (e) => {
-      console.error("❌ Failed to load IBM Orchestrate chat script", e);
-    });
-    document.head.appendChild(script);
+    script.async = true;
 
-    // Handle authentication token when requested by the chat widget
-    const handleAuthNeeded = async (event: any) => {
-      console.log("🔐 IBM Orchestrate authTokenNeeded event detected");
+    script.onload = () => {
       try {
-        const res = await fetch("/api/ibm-token");
-        const data = await res.json();
-
-        if (data.access_token) {
-          event.authToken = data.access_token;
-          console.log("✅ Provided new IBM IAM access token");
+        if (window.wxoLoader && typeof window.wxoLoader.init === "function") {
+          window.wxoLoader.init();
+          setStatus("✅ SmartOrchestrate Assistant initialized");
         } else {
-          console.error("⚠️ Failed to get valid token:", data);
+          setError("Chat loader not found after load");
         }
       } catch (err) {
-        console.error("❌ Error fetching IBM token:", err);
+        console.error("Initialization error:", err);
+        setError("Failed to initialize Watsonx Orchestrate");
       }
     };
 
-    window.addEventListener("authTokenNeeded", handleAuthNeeded);
+    script.onerror = () => {
+      setError("Failed to load IBM Orchestrate script");
+    };
 
+    document.head.appendChild(script);
+
+    // ✅ Cleanup on unmount
     return () => {
-      window.removeEventListener("authTokenNeeded", handleAuthNeeded);
-      if (script.parentNode) script.parentNode.removeChild(script);
+      script.remove();
+      delete window.wxOConfiguration;
     };
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <h1 className="text-3xl font-bold text-blue-700 mb-4">
-        SmartOrchestrate AI Assistant
-      </h1>
-      <p className="text-gray-600 mb-6 text-center max-w-md">
-        Connecting to IBM Watson Orchestrate... Your digital factory assistant
-        will appear here shortly.
-      </p>
-      <div id="root" className="w-full min-h-[500px]" />
+    <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50 text-gray-800">
+      <h2 className="text-2xl font-bold mb-3">🤖 SmartOrchestrate Assistant</h2>
+
+      {error ? (
+        <div className="bg-red-100 border border-red-300 text-red-700 p-3 rounded-lg">
+          {error}
+        </div>
+      ) : (
+        <p className="text-gray-600">{status}</p>
+      )}
+
+      {/* 🔹 Placeholder container (keeps layout safe) */}
+      <div id="ibm-orchestrate-chat" className="hidden" />
     </div>
   );
 }
