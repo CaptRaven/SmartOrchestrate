@@ -8,57 +8,80 @@ declare global {
 }
 
 export default function AIAssistant() {
-  const [status, setStatus] = useState("Loading IBM Orchestrate Assistant…");
+  const [status, setStatus] = useState("Initializing SmartOrchestrate Assistant…");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Clean up any previous chat widget
-    const existingScript = document.querySelector(
-      'script[src*="wxoLoader.js"]'
-    );
-    if (existingScript) existingScript.remove();
+    const chatContainer = document.getElementById("orchestrate-chat-root");
+    if (!chatContainer) {
+      console.error("❌ Missing orchestrate-chat-root div");
+      setError("Chat container not found in DOM.");
+      return;
+    }
 
-    // ✅ Configuration (your live values)
+    // 🧩 Step 1: Configure the Orchestrate Chat
     window.wxOConfiguration = {
       orchestrationID:
         "ab446fdeebdd469cb1f8eb4b0ee169c8_afac4274-ed4f-4982-9175-d4a2f67c4307",
       hostURL: "https://jp-tok.watson-orchestrate.cloud.ibm.com",
-      rootElementID: "ibm-chat-root", // IBM expects this
+      rootElementID: "orchestrate-chat-root",
       showLauncher: true,
-      deploymentPlatform: "ibmcloud",
       crn: "crn:v1:bluemix:public:watsonx-orchestrate:jp-tok:a/ab446fdeebdd469cb1f8eb4b0ee169c8:afac4274-ed4f-4982-9175-d4a2f67c4307::",
+      deploymentPlatform: "ibmcloud",
       chatOptions: {
         agentId: "d0e16d5c-30e8-4cc4-be77-9e682ecc4dee",
         agentEnvironmentId: "d9bd76f2-f547-4801-9ce1-ec38e8401981",
       },
     };
 
-    // ✅ Inject Orchestrate script
+    // 🧩 Step 2: Inject the Watson Orchestrate script
     const script = document.createElement("script");
     script.src = `${window.wxOConfiguration.hostURL}/wxochat/wxoLoader.js?embed=true`;
     script.async = true;
-    script.defer = true;
 
-    script.onload = () => {
+    script.onload = async () => {
       try {
-        if (window.wxoLoader && typeof window.wxoLoader.init === "function") {
+        // ✅ Initialize chat loader
+        if (window.wxoLoader) {
           window.wxoLoader.init();
-          setStatus("✅ IBM Orchestrate loaded successfully");
+
+          // 🧠 Handle authTokenNeeded event (when chat requests a token)
+          document.addEventListener("authTokenNeeded", async (event: any) => {
+            try {
+              const res = await fetch("http://localhost:8000/api/token"); // 🔹 your FastAPI endpoint
+              const data = await res.json();
+
+              if (data?.access_token) {
+                console.log("🔐 Injecting IBM IAM token");
+                event.authToken = data.access_token;
+              } else {
+                console.error("❌ Token missing in API response");
+                setError("Missing IAM token from backend");
+              }
+            } catch (tokenErr) {
+              console.error("❌ Failed to fetch IAM token:", tokenErr);
+              setError("Failed to get authentication token");
+            }
+          });
+
+          setStatus("✅ SmartOrchestrate chat loaded and authenticated.");
         } else {
-          throw new Error("wxoLoader.init() not found");
+          throw new Error("IBM wxoLoader not found");
         }
       } catch (err) {
-        console.error("Orchestrate init error:", err);
-        setError("Failed to initialize IBM Orchestrate");
+        console.error("💥 Error initializing Orchestrate chat:", err);
+        setError("Failed to initialize Orchestrate Assistant");
       }
     };
 
     script.onerror = () => {
-      setError("Failed to load Orchestrate script (network or CORS issue)");
+      console.error("💥 Failed to load IBM Orchestrate script");
+      setError("Failed to load IBM Orchestrate script");
     };
 
-    document.body.appendChild(script);
+    document.head.appendChild(script);
 
+    // Cleanup
     return () => {
       script.remove();
       delete window.wxOConfiguration;
@@ -66,18 +89,15 @@ export default function AIAssistant() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50 text-gray-800">
-      <h2 className="text-2xl font-bold mb-3">🤖 SmartOrchestrate Assistant</h2>
+    <div className="flex flex-col items-center justify-center min-h-[80vh] text-gray-800">
+      <h1 className="text-2xl font-bold mb-2">💬 SmartOrchestrate Assistant</h1>
       {error ? (
-        <div className="bg-red-100 border border-red-300 text-red-700 p-3 rounded-lg">
-          {error}
-        </div>
+        <p className="text-red-600 bg-red-50 p-2 rounded">{error}</p>
       ) : (
-        <p className="text-gray-600">{status}</p>
+        <p>{status}</p>
       )}
-      <p className="text-sm text-gray-500 mt-4">
-        The chat bubble should appear at the bottom right.
-      </p>
+      {/* ✅ Chat widget container */}
+      <div id="orchestrate-chat-root" className="w-full h-full"></div>
     </div>
   );
 }
