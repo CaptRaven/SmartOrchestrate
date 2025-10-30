@@ -8,16 +8,22 @@ declare global {
 }
 
 export default function AIAssistant() {
-  const [status, setStatus] = useState("Loading Orchestrate Assistant…");
+  const [status, setStatus] = useState("Loading IBM Orchestrate Assistant…");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // ✅ Define configuration (your live embed code)
+    // Clean up any previous chat widget
+    const existingScript = document.querySelector(
+      'script[src*="wxoLoader.js"]'
+    );
+    if (existingScript) existingScript.remove();
+
+    // ✅ Configuration (your live values)
     window.wxOConfiguration = {
       orchestrationID:
         "ab446fdeebdd469cb1f8eb4b0ee169c8_afac4274-ed4f-4982-9175-d4a2f67c4307",
       hostURL: "https://jp-tok.watson-orchestrate.cloud.ibm.com",
-      rootElementID: "ibm-orchestrate-chat", // Local placeholder container
+      rootElementID: "ibm-chat-root", // IBM expects this
       showLauncher: true,
       deploymentPlatform: "ibmcloud",
       crn: "crn:v1:bluemix:public:watsonx-orchestrate:jp-tok:a/ab446fdeebdd469cb1f8eb4b0ee169c8:afac4274-ed4f-4982-9175-d4a2f67c4307::",
@@ -27,32 +33,32 @@ export default function AIAssistant() {
       },
     };
 
-    // ✅ Inject the Orchestrate chat script
+    // ✅ Inject Orchestrate script
     const script = document.createElement("script");
     script.src = `${window.wxOConfiguration.hostURL}/wxochat/wxoLoader.js?embed=true`;
     script.async = true;
+    script.defer = true;
 
     script.onload = () => {
       try {
         if (window.wxoLoader && typeof window.wxoLoader.init === "function") {
           window.wxoLoader.init();
-          setStatus("✅ SmartOrchestrate Assistant initialized");
+          setStatus("✅ IBM Orchestrate loaded successfully");
         } else {
-          setError("Chat loader not found after load");
+          throw new Error("wxoLoader.init() not found");
         }
       } catch (err) {
-        console.error("Initialization error:", err);
-        setError("Failed to initialize Watsonx Orchestrate");
+        console.error("Orchestrate init error:", err);
+        setError("Failed to initialize IBM Orchestrate");
       }
     };
 
     script.onerror = () => {
-      setError("Failed to load IBM Orchestrate script");
+      setError("Failed to load Orchestrate script (network or CORS issue)");
     };
 
-    document.head.appendChild(script);
+    document.body.appendChild(script);
 
-    // ✅ Cleanup on unmount
     return () => {
       script.remove();
       delete window.wxOConfiguration;
@@ -62,7 +68,6 @@ export default function AIAssistant() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50 text-gray-800">
       <h2 className="text-2xl font-bold mb-3">🤖 SmartOrchestrate Assistant</h2>
-
       {error ? (
         <div className="bg-red-100 border border-red-300 text-red-700 p-3 rounded-lg">
           {error}
@@ -70,9 +75,9 @@ export default function AIAssistant() {
       ) : (
         <p className="text-gray-600">{status}</p>
       )}
-
-      {/* 🔹 Placeholder container (keeps layout safe) */}
-      <div id="ibm-orchestrate-chat" className="hidden" />
+      <p className="text-sm text-gray-500 mt-4">
+        The chat bubble should appear at the bottom right.
+      </p>
     </div>
   );
 }
