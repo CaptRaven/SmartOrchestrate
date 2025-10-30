@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 declare global {
   interface Window {
@@ -8,21 +8,23 @@ declare global {
 }
 
 export default function AIAssistant() {
+  const [status, setStatus] = useState("Loading SmartOrchestrate chat...");
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const container = document.createElement("div");
     container.id = "orchestrate-chat-root";
     document.body.appendChild(container);
 
-    // Fetch IAM token dynamically from your backend
-    async function initChat() {
-      try {
-        const res = await fetch("https://orchestrate-backend.onrender.com/api/token");
+    // ✅ Step 1: Fetch token from your FastAPI backend
+    fetch("https://orchestrate-backend.onrender.com/api/token")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Token request failed: ${res.status}`);
         const data = await res.json();
         const token = data.access_token;
+        if (!token) throw new Error("Token missing from response");
 
-        if (!token) throw new Error("No token received");
-
-        // Inject IBM configuration
+        // ✅ Step 2: Set configuration for Orchestrate
         window.wxOConfiguration = {
           orchestrationID:
             "ab446fdeebdd469cb1f8eb4b0ee169c8_afac4274-ed4f-4982-9175-d4a2f67c4307",
@@ -34,29 +36,51 @@ export default function AIAssistant() {
           chatOptions: {
             agentId: "d0e16d5c-30e8-4cc4-be77-9e682ecc4dee",
             agentEnvironmentId: "d9bd76f2-f547-4801-9ce1-ec38e8401981",
-            authToken: token,
+            authToken: token, // ✅ attach token here
           },
         };
 
+        // ✅ Step 3: Load the Watson Orchestrate chat script
         const script = document.createElement("script");
         script.src = `${window.wxOConfiguration.hostURL}/wxochat/wxoLoader.js?embed=true`;
         script.async = true;
+
         script.onload = () => {
-          window.wxoLoader.init();
+          try {
+            window.wxoLoader.init();
+            setStatus("✅ SmartOrchestrate chat initialized");
+          } catch (err) {
+            console.error("Initialization error:", err);
+            setError("Failed to initialize Watsonx Orchestrate");
+          }
         };
+
+        script.onerror = () => setError("Failed to load Orchestrate script");
         document.head.appendChild(script);
-      } catch (error) {
-        console.error("Failed to initialize chat:", error);
-      }
-    }
+      })
+      .catch((err) => {
+        console.error("Error initializing chat:", err);
+        setError(err.message);
+      });
 
-    initChat();
-
+    // Cleanup
     return () => {
-      container.remove();
+      const container = document.getElementById("orchestrate-chat-root");
+      if (container) container.remove();
       delete window.wxOConfiguration;
     };
   }, []);
 
-  return null;
+  return (
+    <div className="flex flex-col items-center justify-center h-[80vh] text-gray-800">
+      <h2 className="text-2xl font-bold mb-2">💬 SmartOrchestrate Assistant</h2>
+      {error ? (
+        <p className="text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+          {error}
+        </p>
+      ) : (
+        <p>{status}</p>
+      )}
+    </div>
+  );
 }
