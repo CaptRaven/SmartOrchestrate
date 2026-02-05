@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, Machine, ProductionMetric, OptimizationSuggestion, SustainabilityMetric, ChatMessage, Notification } from '../lib/supabase';
+import { Machine, ProductionMetric, OptimizationSuggestion, SustainabilityMetric, ChatMessage, Notification } from '../lib/supabase';
+import { MockService } from '../lib/mockData';
 
 interface AppContextType {
   machines: Machine[];
@@ -14,6 +15,8 @@ interface AppContextType {
   approveOptimization: (id: string) => Promise<void>;
   rejectOptimization: (id: string) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
+  scheduleMaintenance: (id: string) => Promise<void>;
+  completeMaintenance: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -29,21 +32,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshData = async () => {
     try {
-      const [machinesRes, metricsRes, optimizationsRes, sustainabilityRes, chatRes, notificationsRes] = await Promise.all([
-        supabase.from('machines').select('*').order('created_at', { ascending: true }),
-        supabase.from('production_metrics').select('*').order('timestamp', { ascending: true }),
-        supabase.from('optimization_suggestions').select('*').order('created_at', { ascending: false }),
-        supabase.from('sustainability_metrics').select('*').order('timestamp', { ascending: true }),
-        supabase.from('ai_chat_messages').select('*').order('created_at', { ascending: true }),
-        supabase.from('notifications').select('*').order('created_at', { ascending: false })
+      // Fetch from MockService instead of Supabase
+      const [machinesData, metricsData, optimizationsData, sustainabilityData, chatData, notificationsData] = await Promise.all([
+        MockService.getMachines(),
+        MockService.getProductionMetrics(),
+        MockService.getOptimizations(),
+        MockService.getSustainabilityMetrics(),
+        MockService.getChatMessages(),
+        MockService.getNotifications()
       ]);
 
-      if (machinesRes.data) setMachines(machinesRes.data);
-      if (metricsRes.data) setProductionMetrics(metricsRes.data);
-      if (optimizationsRes.data) setOptimizations(optimizationsRes.data);
-      if (sustainabilityRes.data) setSustainabilityMetrics(sustainabilityRes.data);
-      if (chatRes.data) setChatMessages(chatRes.data);
-      if (notificationsRes.data) setNotifications(notificationsRes.data);
+      setMachines(machinesData);
+      setProductionMetrics(metricsData);
+      setOptimizations(optimizationsData);
+      setSustainabilityMetrics(sustainabilityData);
+      setChatMessages(chatData);
+      setNotifications(notificationsData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -51,73 +55,90 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const sendMessage = async (message: string) => {
-    await supabase.from('ai_chat_messages').insert({ message, role: 'user' });
-
-    setTimeout(async () => {
-      const response = generateAIResponse(message);
-      await supabase.from('ai_chat_messages').insert({ message: response, role: 'assistant' });
-      await refreshData();
-    }, 1000);
+  const simulateRealtimeUpdates = () => {
+    MockService.simulateTick();
+    refreshData();
   };
 
-  const generateAIResponse = (userMessage: string): string => {
-    const lowerMsg = userMessage.toLowerCase();
+  const sendMessage = async (message: string) => {
+    // 1. Save user message to Mock Service
+    await MockService.addChatMessage(message, 'user');
+    await refreshData();
 
-    if (lowerMsg.includes('maintenance') || lowerMsg.includes('repair')) {
-      return 'I have analyzed the maintenance schedule. The Packaging Unit D4 requires immediate attention due to hydraulic pressure issues. I recommend scheduling maintenance within the next 24 hours to prevent production delays.';
-    } else if (lowerMsg.includes('production') || lowerMsg.includes('output')) {
-      return 'Current production rate is at 925 units/hour with 92% efficiency. Based on historical data, we can optimize output by adjusting Assembly Line A1 speed during peak hours.';
-    } else if (lowerMsg.includes('energy') || lowerMsg.includes('power')) {
-      return 'Energy consumption is currently at 239 kWh. I have identified opportunities to reduce usage by 15% through smart power management during low-demand periods. Would you like me to implement these changes?';
-    } else if (lowerMsg.includes('sustainability') || lowerMsg.includes('co2')) {
-      return 'Great news! We have achieved a 171kg CO2 reduction today, with cumulative energy savings of 445 kWh. Our efficiency improvements are contributing to UN SDG 9 targets.';
-    } else if (lowerMsg.includes('optimize') || lowerMsg.includes('improve')) {
-      return 'I have 3 optimization suggestions ready for review. The most impactful is enabling Energy Efficiency Mode, which can save 180 kWh daily. Would you like to approve these recommendations?';
-    } else if (lowerMsg.includes('report') || lowerMsg.includes('summary')) {
-      return 'Generating comprehensive factory report: Overall efficiency at 92%, 4 machines operational, 1 requiring attention, 3 pending optimizations. Sustainability metrics show positive trends across all indicators.';
-    } else {
-      return 'I am your AI Factory Assistant. I can help with maintenance scheduling, production optimization, energy management, and sustainability tracking. What would you like to know?';
+    try {
+      // Prepare system prompt with current state
+      const systemPrompt = `You are a Smart Factory AI Assistant. 
+      Current System State:
+      - Machines: ${JSON.stringify(machines.map(m => ({ name: m.name, status: m.status, efficiency: m.efficiency, issue: m.issue_detected })))}
+      - Latest Production Rate: ${productionMetrics[productionMetrics.length - 1]?.production_rate.toFixed(1)} units/hr
+      - Active Alerts: ${notifications.filter(n => !n.read && n.type !== 'info').map(n => n.message).join(', ') || 'None'}
+      
+      User Question: ${message}
+      
+      Answer concisely based on the real-time data provided above. If a machine has an issue, recommend specific maintenance actions.`;
+
+      // 2. Call Ollama (via local proxy)
+      const response = await fetch('/api/ollama/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama3', // User can change this model name if they have a different one installed
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.message?.content || 'Sorry, I could not generate a response.';
+
+      // 3. Save assistant response to Mock Service
+      await MockService.addChatMessage(aiMessage, 'assistant');
+      await refreshData();
+
+    } catch (error) {
+      console.error('Error calling Ollama:', error);
+      await MockService.addChatMessage('Error: Could not connect to local AI model. Please ensure Ollama is running.', 'assistant');
+      await refreshData();
     }
   };
 
   const approveOptimization = async (id: string) => {
-    await supabase
-      .from('optimization_suggestions')
-      .update({ status: 'approved', approved_at: new Date().toISOString() })
-      .eq('id', id);
-
-    await supabase.from('notifications').insert({
-      title: 'Optimization Approved',
-      message: 'An optimization suggestion has been approved and is being implemented.',
-      type: 'success'
-    });
-
+    await MockService.approveOptimization(id);
     await refreshData();
   };
 
   const rejectOptimization = async (id: string) => {
-    await supabase
-      .from('optimization_suggestions')
-      .update({ status: 'rejected' })
-      .eq('id', id);
-
+    await MockService.rejectOptimization(id);
     await refreshData();
   };
 
   const markNotificationRead = async (id: string) => {
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', id);
+    await MockService.markNotificationRead(id);
+    await refreshData();
+  };
 
+  const scheduleMaintenance = async (id: string) => {
+    await MockService.scheduleMaintenance(id);
+    await refreshData();
+  };
+
+  const completeMaintenance = async (id: string) => {
+    await MockService.completeMaintenance(id);
     await refreshData();
   };
 
   useEffect(() => {
     refreshData();
 
-    const interval = setInterval(refreshData, 10000);
+    // Run simulation loop every 5 seconds
+    const interval = setInterval(simulateRealtimeUpdates, 5000);
 
     return () => clearInterval(interval);
   }, []);
@@ -135,7 +156,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendMessage,
       approveOptimization,
       rejectOptimization,
-      markNotificationRead
+      markNotificationRead,
+      scheduleMaintenance,
+      completeMaintenance
     }}>
       {children}
     </AppContext.Provider>

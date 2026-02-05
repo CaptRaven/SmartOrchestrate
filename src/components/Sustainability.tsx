@@ -1,9 +1,36 @@
 import { Leaf, Zap, TrendingDown, Award, Download } from 'lucide-react';
+import { useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Sustainability() {
   const { sustainabilityMetrics, loading } = useApp();
+
+  const totalCO2Reduction = useMemo(
+    () => sustainabilityMetrics.reduce((sum, m) => sum + Number(m.co2_reduction), 0),
+    [sustainabilityMetrics]
+  );
+  const totalEnergySaved = useMemo(
+    () => sustainabilityMetrics.reduce((sum, m) => sum + Number(m.energy_saved), 0),
+    [sustainabilityMetrics]
+  );
+  const avgEfficiencyGain = useMemo(
+    () =>
+      sustainabilityMetrics.length
+        ? sustainabilityMetrics.reduce((sum, m) => sum + Number(m.efficiency_gain), 0) / sustainabilityMetrics.length
+        : 0,
+    [sustainabilityMetrics]
+  );
+  const chartData = useMemo(
+    () =>
+      sustainabilityMetrics.map(metric => ({
+        date: new Date(metric.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        co2: Number(metric.co2_reduction),
+        energy: Number(metric.energy_saved),
+        efficiency: Number(metric.efficiency_gain)
+      })),
+    [sustainabilityMetrics]
+  );
 
   if (loading) {
     return (
@@ -12,17 +39,6 @@ export default function Sustainability() {
       </div>
     );
   }
-
-  const totalCO2Reduction = sustainabilityMetrics.reduce((sum, m) => sum + m.co2_reduction, 0);
-  const totalEnergySaved = sustainabilityMetrics.reduce((sum, m) => sum + m.energy_saved, 0);
-  const avgEfficiencyGain = sustainabilityMetrics.reduce((sum, m) => sum + m.efficiency_gain, 0) / sustainabilityMetrics.length;
-
-  const chartData = sustainabilityMetrics.map(metric => ({
-    date: new Date(metric.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    co2: metric.co2_reduction,
-    energy: metric.energy_saved,
-    efficiency: metric.efficiency_gain
-  }));
 
   const handleDownloadReport = () => {
     const report = `

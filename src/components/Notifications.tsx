@@ -1,4 +1,5 @@
 import { Bell, CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { Notification } from '../lib/supabase';
 import { useApp } from '../contexts/AppContext';
 
 export default function Notifications() {
@@ -45,7 +46,6 @@ export default function Notifications() {
               <NotificationCard
                 key={notification.id}
                 notification={notification}
-                onMarkRead={() => {}}
               />
             ))}
           </div>
@@ -64,8 +64,8 @@ export default function Notifications() {
 }
 
 function NotificationCard({ notification, onMarkRead }: {
-  notification: any;
-  onMarkRead: () => void;
+  notification: Notification;
+  onMarkRead?: () => void;
 }) {
   const typeConfig = {
     info: {
@@ -114,7 +114,7 @@ function NotificationCard({ notification, onMarkRead }: {
         </div>
         {!notification.read && (
           <button
-            onClick={onMarkRead}
+            onClick={() => onMarkRead && onMarkRead()}
             className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 transition-colors"
             title="Mark as read"
           >

@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-#watson-chat-root {
+#watson-chat-root,
+#orchestrate-chat-root {
   min-height: 600px;
   height: 100%;
   width: 100%;

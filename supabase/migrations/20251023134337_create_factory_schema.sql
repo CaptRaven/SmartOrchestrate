@@ -128,11 +128,15 @@ ALTER TABLE ai_chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for public access (demo app)
+-- Note: In a real production app, you should restrict INSERT/UPDATE to authenticated users only.
+-- For this demo, we allow anon access to facilitate easy testing without auth setup.
+
 CREATE POLICY "Allow public read access to machines"
   ON machines FOR SELECT
   TO anon
   USING (true);
 
+-- Allow anon updates for demo interactivity
 CREATE POLICY "Allow public insert to machines"
   ON machines FOR INSERT
   TO anon

@@ -2,7 +2,7 @@ import { Wrench, AlertCircle, CheckCircle, Clock, Brain } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 
 export default function Maintenance() {
-  const { machines, loading } = useApp();
+  const { machines, loading, scheduleMaintenance, completeMaintenance } = useApp();
 
   if (loading) {
     return (
@@ -157,8 +157,25 @@ export default function Maintenance() {
 
               {(machine.status === 'warning' || machine.status === 'critical') && (
                 <div className="mt-4 flex gap-2">
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                  <button 
+                    onClick={() => scheduleMaintenance(machine.id)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
                     Schedule Maintenance
+                  </button>
+                  <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium">
+                    View Details
+                  </button>
+                </div>
+              )}
+
+              {machine.status === 'maintenance' && (
+                <div className="mt-4 flex gap-2">
+                  <button 
+                    onClick={() => completeMaintenance(machine.id)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    Complete Maintenance
                   </button>
                   <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium">
                     View Details

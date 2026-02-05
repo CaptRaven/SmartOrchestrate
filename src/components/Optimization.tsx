@@ -1,9 +1,20 @@
 import { Lightbulb, ThumbsUp, ThumbsDown, TrendingUp, Check } from 'lucide-react';
+import { useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { OptimizationSuggestion } from '../lib/supabase';
 
 export default function Optimization() {
   const { optimizations, approveOptimization, rejectOptimization, loading } = useApp();
+
+  const pendingOptimizations = useMemo(
+    () => optimizations.filter(o => o.status === 'pending'),
+    [optimizations]
+  );
+  const approvedOptimizations = useMemo(
+    () => optimizations.filter(o => o.status === 'approved' || o.status === 'implemented'),
+    [optimizations]
+  );
 
   if (loading) {
     return (
@@ -12,9 +23,6 @@ export default function Optimization() {
       </div>
     );
   }
-
-  const pendingOptimizations = optimizations.filter(o => o.status === 'pending');
-  const approvedOptimizations = optimizations.filter(o => o.status === 'approved' || o.status === 'implemented');
 
   const impactData = [
     { name: 'Production Rate', current: 925, optimized: 1036 },
@@ -140,7 +148,7 @@ function MetricCard({ icon, label, value, color }: {
 }
 
 function OptimizationCard({ optimization, onApprove, onReject }: {
-  optimization: any;
+  optimization: OptimizationSuggestion;
   onApprove: () => void;
   onReject: () => void;
 }) {
