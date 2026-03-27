@@ -3,6 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+type QueryResult<T = unknown> = Promise<{ data?: T; error?: null }>;
+
+interface SupabaseFallbackClient {
+  from: () => {
+    select: () => {
+      order: () => QueryResult<unknown[]>;
+    };
+    insert: () => QueryResult;
+    update: () => {
+      eq: () => QueryResult;
+    };
+  };
+}
+
 // Export a dummy client if config is missing, to allow types to be imported without crashing
 export const supabase = (supabaseUrl && supabaseAnonKey) 
   ? createClient(supabaseUrl, supabaseAnonKey)
@@ -12,7 +26,7 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
         insert: () => Promise.resolve({ error: null }),
         update: () => ({ eq: () => Promise.resolve({ error: null }) }),
       })
-    } as any;
+    } as SupabaseFallbackClient;
 
 export interface Machine {
   id: string;

@@ -1,6 +1,6 @@
 import { LayoutDashboard, Bot, Wrench, TrendingUp, Leaf, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '../hooks/useApp';
 
 export default function Navigation() {
   const location = useLocation();

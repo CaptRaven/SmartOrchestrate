@@ -1,6 +1,6 @@
 import { Activity, Zap, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useMemo } from 'react';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '../hooks/useApp';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Machine } from '../lib/supabase';
 

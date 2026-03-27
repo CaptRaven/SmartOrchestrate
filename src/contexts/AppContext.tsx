@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { Machine, ProductionMetric, OptimizationSuggestion, SustainabilityMetric, ChatMessage, Notification } from '../lib/supabase';
 import { MockService } from '../lib/mockData';
 
@@ -19,7 +19,7 @@ interface AppContextType {
   completeMaintenance: (id: string) => Promise<void>;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -30,7 +30,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
       // Fetch from MockService instead of Supabase
       const [machinesData, metricsData, optimizationsData, sustainabilityData, chatData, notificationsData] = await Promise.all([
@@ -53,12 +53,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const simulateRealtimeUpdates = () => {
+  const simulateRealtimeUpdates = useCallback(() => {
     MockService.simulateTick();
     refreshData();
-  };
+  }, [refreshData]);
 
   const sendMessage = async (message: string) => {
     // 1. Save user message to Mock Service
@@ -141,7 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(simulateRealtimeUpdates, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshData, simulateRealtimeUpdates]);
 
   return (
     <AppContext.Provider value={{
@@ -163,12 +163,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
       {children}
     </AppContext.Provider>
   );
-}
-
-export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within AppProvider');
-  }
-  return context;
 }

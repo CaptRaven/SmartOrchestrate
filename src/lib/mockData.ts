@@ -78,7 +78,7 @@ let optimizations: OptimizationSuggestion[] = [
   }
 ];
 
-let sustainabilityMetrics: SustainabilityMetric[] = Array.from({ length: 7 }).map((_, i) => ({
+const sustainabilityMetrics: SustainabilityMetric[] = Array.from({ length: 7 }).map((_, i) => ({
   id: `sm-${i}`,
   timestamp: new Date(Date.now() - (6 - i) * 24 * 3600000).toISOString(),
   co2_reduction: 120 + i * 10 + Math.random() * 20,
@@ -120,7 +120,7 @@ export const MockService = {
   simulateTick: () => {
     // 1. Fluctuate machine efficiency
     machines = machines.map(m => {
-      let change = (Math.random() - 0.5) * 5; // +/- 2.5%
+      const change = (Math.random() - 0.5) * 5; // +/- 2.5%
       let newEfficiency = Math.max(0, Math.min(100, m.efficiency + change));
       
       // Randomly trigger issues

@@ -1,6 +1,6 @@
 import { Lightbulb, ThumbsUp, ThumbsDown, TrendingUp, Check } from 'lucide-react';
 import { useMemo } from 'react';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '../hooks/useApp';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { OptimizationSuggestion } from '../lib/supabase';
 

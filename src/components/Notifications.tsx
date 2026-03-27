@@ -1,6 +1,6 @@
 import { Bell, CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { Notification } from '../lib/supabase';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '../hooks/useApp';
 
 export default function Notifications() {
   const { notifications, markNotificationRead, loading } = useApp();

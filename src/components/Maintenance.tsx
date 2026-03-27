@@ -1,5 +1,5 @@
 import { Wrench, AlertCircle, CheckCircle, Clock, Brain } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '../hooks/useApp';
 
 export default function Maintenance() {
   const { machines, loading, scheduleMaintenance, completeMaintenance } = useApp();

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '../hooks/useApp';
 
 export default function AIAssistant() {
   const { chatMessages, sendMessage, loading } = useApp();
